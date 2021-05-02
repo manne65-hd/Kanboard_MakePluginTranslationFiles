@@ -228,14 +228,10 @@ function makeTranslation($trans_keys) {
     if (!$handle = fopen('translations.php', 'w')) {
         die('ERROR');
     };
+
+
     // generate PHP opening-tags and required code for the array ...
-    if (!fwrite($handle, '<?php' . PHP_EOL)) {
-        die('ERROR');
-    }
-    if (!fwrite($handle, PHP_EOL)) {
-        die('ERROR');
-    }
-    if (!fwrite($handle, 'return array(' . PHP_EOL)) {
+    if (!fwrite($handle, getTransHeader())) {
         die('ERROR');
     }
         // now let's iterate over the keys to get translated and generate the code
@@ -246,13 +242,14 @@ function makeTranslation($trans_keys) {
             }
         }
 
-    // generate final code and the file
-    if (!fwrite($handle, ');' . PHP_EOL)) {
+    // generate final code and colse the file-handle
+    if (!fwrite($handle, getTransFooter())) {
         die('ERROR');
     }
     fclose($handle);
 
 }
+
 /**
  * Get available languages // copied from Kanboard/LanguageModel.php
  *
@@ -303,6 +300,37 @@ function getLanguages()
     );
 
     return $languages;
+}
+
+/**
+ * return the HEADER of a tranlations-file
+ *
+ * @return string
+ */
+function getTransHeader(){
+$file_header = <<<EOD
+<?
+// Plugin-translation-file generated with **KB_make_plugin_translations.php**
+// Check it out at https://github.com/manne65-hd/Kanboard_MakePluginTranslationFiles
+return array(
+
+EOD;
+
+    return $file_header;
+}
+
+/**
+ * return the FOOTER of a tranlations-file
+ *
+ * @return string
+ */
+function getTransFooter(){
+$file_footer = <<<EOD
+);
+
+EOD;
+
+    return $file_footer;
 }
 
 /**
