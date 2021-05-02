@@ -15,42 +15,52 @@
 // via browser ... or define an error-message of your choice!
 define('NON_CLI_DIE_MESSAGE', 'This script can only be run in CommandLineMode!');
 
-$mpl_config = array();
+$mpt_config = array();
 
 // make sure the script only runs when called via CLI
 //(PHP_SAPI !== 'cli' || isset($_SERVER['HTTP_USER_AGENT'])) && die(NON_CLI_DIE_MESSAGE);
 
+// Let's start ...
 initialize();
-// get all language keys from kanboard (french translation)
-$master_lang_keys = getMasterLangKeys($mpl_config['master_lang']);
 
+// get all language keys from kanboard(french translation)
+$kb_lang_keys = getKbLangKeys($mpt_config['kb_lang']);
 
-//dd($master_lang_keys);
-
-$script_lang_keys = array();
+// get a list of all PHP-files in the plugin's directory-tree
 $plugin_scripts = getPluginScripts();
+
+
+// find and extract UNIQUE language-keys for all scripts
+$script_lang_keys = array();
 foreach ($plugin_scripts as $plugin_script) {
     //$script_lang_keys[] = getLangTerms($plugin_script);
-    $script_lang_keys[] = getLangTerms($plugin_script);
+    $script_lang_keys[] = getScriptKeys($plugin_script);
 }
-//ddd($script_lang_keys);
+dd($script_lang_keys);
 
-$plugin_lang_keys = array();
+// MERGE all $script_lang_keys into $all_plugin_lang_keys
+$all_plugin_lang_keys = array();
 foreach ($script_lang_keys as $merge_keys) {
-    if (count($plugin_lang_keys) === 0 ) {
-        if (is_array($merge_keys)) {
-            $plugin_lang_keys = $merge_keys;
+    if (count($all_plugin_lang_keys) === 0 ) {
+        if ($merge_keys['lang_keys']) {
+            $all_plugin_lang_keys = $merge_keys['lang_keys'];
         }
     } else {
-        if (is_array($merge_keys)) {
-            $plugin_lang_keys = array_merge($plugin_lang_keys, $merge_keys);
+        if ($merge_keys['lang_keys']) {
+            $all_plugin_lang_keys = array_merge($all_plugin_lang_keys, $merge_keys['lang_keys']);
         }
     }
 }
+dd($all_plugin_lang_keys);
 
-dd($plugin_lang_keys);
-exit;
+// make unique ...
+$unique_plugin_lang_keys = array_unique($all_plugin_lang_keys);
+dd($unique_plugin_lang_keys);
 
+// and finally remove all Kanboard-language-keys, thus returning only
+// language-keys specific for this plugin, that actually need translation!
+$translate_plugin_lang_keys = array_diff($unique_plugin_lang_keys, $kb_lang_keys);
+ddd($translate_plugin_lang_keys);
 
 
 
@@ -69,11 +79,11 @@ exit;
  * @return array
  */
 function initialize() {
-    global $mpl_config;
+    global $mpt_config;
 
-    $mpl_config['path_plugins'] = dirname(__DIR__);
-    $mpl_config['path_kb_root'] = dirname($mpl_config['path_plugins']);
-    $mpl_config['master_lang'] = $mpl_config['path_kb_root'] . '\app\Locale\fr_FR\translations.php';
+    $mpt_config['path_plugins'] = dirname(__DIR__);
+    $mpt_config['path_kb_root'] = dirname($mpt_config['path_plugins']);
+    $mpt_config['kb_lang'] = $mpt_config['path_kb_root'] . '\app\Locale\fr_FR\translations.php';
 
 }
 /**
@@ -84,7 +94,7 @@ function initialize() {
 function getPluginScripts() {
     // files and folders to ignore
     $ignore_pattern = array(
-        'KB_make_plugin_lang.php',
+        'KB_make_plugin_translations.php',
         '.git',
         'assets',
         'Locale',
@@ -124,16 +134,16 @@ function haystackHasNeedle($haystack, $needles, $offset=0) {
 }
 
 /**
- * Return the array of the Kanboard's core language-terms
+ * Return the array of the Kanboard's core language-keys
  *
- * @param string $script Script to search for calls to the translate-function t('foo')
+ * @param string $lang_file Script to search for Kanboard's language-keys
  *
  * @return array
  */
-function getMasterLangKeys($master_lang) {
-    $master_lang_keys = array();
+function getKbLangKeys($lang_file) {
+    $lang_keys = array();
 
-    $handle = @fopen($master_lang, "r");
+    $handle = @fopen($lang_file, "r");
     if ($handle) {
         while (($buffer = fgets($handle, 4096)) !== false) {
             $extract = explode('=>', $buffer);
@@ -145,7 +155,7 @@ function getMasterLangKeys($master_lang) {
                 // strip off trailing '
                 $lang_key = substr($lang_key, 0, -1);
                 // and add it to the list
-                $master_lang_keys[] = $lang_key;
+                $lang_keys[] = $lang_key;
             }
         }
         if (!feof($handle)) {
@@ -153,37 +163,55 @@ function getMasterLangKeys($master_lang) {
         }
         fclose($handle);
     }
-    return $master_lang_keys;
+    return $lang_keys;
 }
 
 /**
- * Return an array of language-terms used in the given script
+ * Return an array of language-keys used in the given script
  *
- * @param string $script Script to search for calls to the translate-function t('foo')
+ * @param string $script_file Script to search for calls to the translate-function t('foo')
  *
  * @return array
  */
-function getLangTerms($script) {
-    $lang_terms = array();
-    // REGEXpression to find language-terms
+function getScriptKeys($script_file) {
+    $lang_keys = array();
+    $lang_keys['script_file'] = $script_file;
+    $all_lang_keys['lang_keys'] = array();
+    // REGEXpression to find language-keys
     $regx_find_langterm = '/(?<=t\(\')(.*?)(?=\'\))/m';
     $regx_find_langterm = '/(?<=t\(\')(.*?)(?=\')/m';
 
-    $handle = @fopen($script, "r");
+    $handle = @fopen($script_file, "r");
     if ($handle) {
         while (($buffer = fgets($handle, 4096)) !== false) {
             preg_match_all($regx_find_langterm, $buffer, $matches, PREG_SET_ORDER, 0);
             if ( count($matches) ) {
                 //dd($matches[0][0]);
-                $lang_terms[] = $matches[0][0];
-            };
+                $all_lang_keys['lang_keys'][] = $matches[0][0];
+            }
         }
+        // IF no matches where found --> convert $all_lang_keys['lang_keys'] from empty array to FALSE
+        $all_lang_keys['lang_keys'] =  (! count($all_lang_keys['lang_keys'])) ? FALSE : $all_lang_keys['lang_keys'];
+        // make UNIQUE
+        if (! $all_lang_keys['lang_keys']) {
+            $lang_keys['lang_keys'] = FALSE;
+            // add some more information
+            $lang_keys['num_keys_found'] = FALSE;
+            $lang_keys['num_keys_unique'] = FALSE;
+        } else {
+            $lang_keys['lang_keys'] = array_unique($all_lang_keys['lang_keys']);
+            // add some more information
+            $lang_keys['num_keys_found'] = count($all_lang_keys['lang_keys']);
+            $lang_keys['num_keys_unique'] = count($lang_keys['lang_keys']);
+        }
+
+
         if (!feof($handle)) {
             echo "Fehler: unerwarteter fgets() Fehlschlag\n";
         }
         fclose($handle);
     }
-    return $lang_terms;
+    return $lang_keys;
 }
 
 /**
@@ -247,7 +275,7 @@ function getLanguages()
 function dd($debug_var) {
     echo '<pre>' . PHP_EOL;
     var_dump($debug_var);
-    echo '</pre>' . PHP_EOL;
+    echo '</pre><hr>' . PHP_EOL;
 }
 
 /**
