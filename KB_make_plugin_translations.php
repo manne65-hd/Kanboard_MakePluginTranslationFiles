@@ -36,7 +36,7 @@ foreach ($plugin_scripts as $plugin_script) {
     //$script_lang_keys[] = getLangTerms($plugin_script);
     $script_lang_keys[] = getScriptKeys($plugin_script);
 }
-dd($script_lang_keys);
+//dd($script_lang_keys);
 
 // MERGE all $script_lang_keys into $all_plugin_lang_keys
 $all_plugin_lang_keys = array();
@@ -51,17 +51,19 @@ foreach ($script_lang_keys as $merge_keys) {
         }
     }
 }
-dd($all_plugin_lang_keys);
+//dd($all_plugin_lang_keys);
 
 // make unique ...
 $unique_plugin_lang_keys = array_unique($all_plugin_lang_keys);
-dd($unique_plugin_lang_keys);
+//dd($unique_plugin_lang_keys);
 
 // and finally remove all Kanboard-language-keys, thus returning only
 // language-keys specific for this plugin, that actually need translation!
 $translate_plugin_lang_keys = array_diff($unique_plugin_lang_keys, $kb_lang_keys);
-ddd($translate_plugin_lang_keys);
+//ddd($translate_plugin_lang_keys);
 
+
+makeTranslation($translate_plugin_lang_keys);
 
 
 
@@ -179,7 +181,7 @@ function getScriptKeys($script_file) {
     $all_lang_keys['lang_keys'] = array();
     // REGEXpression to find language-keys
     $regx_find_langterm = '/(?<=t\(\')(.*?)(?=\'\))/m';
-    $regx_find_langterm = '/(?<=t\(\')(.*?)(?=\')/m';
+    $regx_find_langterm = '/(?<= t\(\')(.*?)(?=\')/m';
 
     $handle = @fopen($script_file, "r");
     if ($handle) {
@@ -214,6 +216,43 @@ function getScriptKeys($script_file) {
     return $lang_keys;
 }
 
+/**
+ * Make (generate or update) a translation-file
+ *
+ * @param array $trans_keys Language-Keys that need translation
+ *
+ * @return bool TRUE if successful or else > FALSE
+ */
+function makeTranslation($trans_keys) {
+    // try opening file in WRITE-mode
+    if (!$handle = fopen('translations.php', 'w')) {
+        die('ERROR');
+    };
+    // generate PHP opening-tags and required code for the array ...
+    if (!fwrite($handle, '<?php' . PHP_EOL)) {
+        die('ERROR');
+    }
+    if (!fwrite($handle, PHP_EOL)) {
+        die('ERROR');
+    }
+    if (!fwrite($handle, 'return array(' . PHP_EOL)) {
+        die('ERROR');
+    }
+        // now let's iterate over the keys to get translated and generate the code
+        foreach ($trans_keys as $trans_key) {
+            //$key_line = "    '$trans_key' => ''" . PHP_EOL;
+            if (!fwrite($handle, "    '$trans_key' => ''," . PHP_EOL)) {
+                die('ERROR');
+            }
+        }
+
+    // generate final code and the file
+    if (!fwrite($handle, ');' . PHP_EOL)) {
+        die('ERROR');
+    }
+    fclose($handle);
+
+}
 /**
  * Get available languages // copied from Kanboard/LanguageModel.php
  *
