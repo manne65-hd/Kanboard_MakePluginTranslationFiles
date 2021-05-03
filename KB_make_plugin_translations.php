@@ -17,13 +17,17 @@
  * in order to configure this script.
  *============================================================================*/
 // foldername of the plugin for which you want to prepare/update translations
-$my_plugin_folder = 'My_KanboardPlugin'; // CASE-sensitive!
+$my_plugin_folder = 'My_TestPlugin'; // CASE-sensitive!
 
 /* array of language-codes for which you want to offer translations
  * MUST be a vaild code as available in Kanboard/app/Model/LanguageModel.php */
 $my_plugin_langs = array(
      'xy_XY',
      'zz_ZZ',
+);
+$my_plugin_langs = array(
+    'de_DE',
+    'de_DE_du',
 );
 
 /* set to TRUE if you want to prepare translations for all other languages.
