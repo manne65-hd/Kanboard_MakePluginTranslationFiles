@@ -2,29 +2,78 @@
 /*******************************************************************************
 **      Make (Kanboard)Plugin-Translation-Files
 ** =================================================
-**
 ** A(self-contained) CLI-tool to find all calls to Kanboard's translate-function
 ** in your plugin and generate/update translation-files for it.
 ** -----------------------------------------------------------------------------
 ** @Author: Manfred Hoffmann
 ** @Version: 0.0.1 (2021-05-02)
-**
-*******************************************************************************/
+** -----------------------------------------------------------------------------
+********************************************************************************/
 
-// Leave blank if users should get a BLANK page, when calling the script
-// via browser ... or define an error-message of your choice!
-define('NON_CLI_DIE_MESSAGE', 'This script can only be run in CommandLineMode!');
+/*==============================================================================
+ *                          START of configuration
+ *                         ------------------------
+ * BELOW you'll find some parameters you'll have to adjust,
+ * in order to configure this script.
+ *============================================================================*/
+// foldername of the plugin for which you want to prepare/update translations
+$my_plugin_folder = 'My_KanboardPlugin'; // CASE-sensitive!
 
-$mpt_config = array();
+/* array of language-codes for which you want to offer translations
+ * MUST be a vaild code as available in Kanboard/app/Model/LanguageModel.php */
+$my_plugin_langs = array(
+    'xy_XY',
+    'zz_ZZ',
+);
 
-// make sure the script only runs when called via CLI
+/* set to TRUE if you want to prepare translations for all other languages
+ * this will generate language-files with all statements commented out like:
+ *    // 'Your first term' => '',
+ *    // 'another term' => '',
+ */
+$prepare_all_other_langs = TRUE;
+
+// set to TRUE if you want to generate a LOG-file of the process
+$log_to_file = TRUE;
+
+/*==============================================================================
+ *                           END of configuration
+ *                          ----------------------
+ *          !!!!! DON'T MAKE ANY CHANGES BELOW THIS LINE !!!!!
+ *============================================================================*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ define('NON_CLI_DIE_MESSAGE', 'This script can only be run in CommandLineMode!');
+
+// make sure the script only runs when called via CLI otherwise > DIE!
 //(PHP_SAPI !== 'cli' || isset($_SERVER['HTTP_USER_AGENT'])) && die(NON_CLI_DIE_MESSAGE);
 
 // Let's start ...
-initialize();
+$mpt_config = array();
+$my_plugin_folder        = (isset($my_plugin_folder)) ? $my_plugin_folder : '';
+$my_plugin_langs         = (isset($my_plugin_langs)) ? $my_plugin_langs : array();
+$prepare_all_other_langs = (isset($prepare_all_other_langs)) ? $prepare_all_other_langs : FALSE;
+$log_to_file             = (isset($log_to_file)) ? $log_to_file : FALSE;
+initialize($my_plugin_folder, $my_plugin_langs, $prepare_all_other_langs, $log_to_file);
+
+ddd($mpt_config);
+//echoMessage('KB_make_plugin_translations Version 0.0.1 by manne65hd', 's');
 
 // get all language keys from kanboard(french translation)
-$kb_lang_keys = getKbLangKeys($mpt_config['kb_lang']);
+$kb_lang_keys = getLangKeys($mpt_config['kb_lang']);
 
 // get a list of all PHP-files in the plugin's directory-tree
 $plugin_scripts = getPluginScripts();
@@ -80,11 +129,19 @@ makeTranslation($translate_plugin_lang_keys);
  *
  * @return array
  */
-function initialize() {
+function initialize($my_plugin_folder, $my_plugin_langs, $prepare_all_other_langs, $log_to_file) {
     global $mpt_config;
 
+    // assign config-variables assigned by user to global config-array
+    $mpt_config['my_plugin_folder'] = $my_plugin_folder;
+    $mpt_config['my_plugin_langs'] = $my_plugin_langs;
+    $mpt_config['prep_other_langs'] = $prepare_all_other_langs;
+    $mpt_config['log_to_file'] = $log_to_file;
+
+    // setup basic paths & files
     $mpt_config['path_plugins'] = dirname(__DIR__);
     $mpt_config['path_kb_root'] = dirname($mpt_config['path_plugins']);
+    $mpt_config['path_locales'] = $mpt_config['path_kb_root'] . '\app\Locale';
     $mpt_config['kb_lang'] = $mpt_config['path_kb_root'] . '\app\Locale\fr_FR\translations.php';
 
 }
@@ -142,7 +199,7 @@ function haystackHasNeedle($haystack, $needles, $offset=0) {
  *
  * @return array
  */
-function getKbLangKeys($lang_file) {
+function getLangKeys($lang_file) {
     $lang_keys = array();
 
     $handle = @fopen($lang_file, "r");
@@ -255,8 +312,7 @@ function makeTranslation($trans_keys) {
  *
  * @return array Associative Array with language-codes and corresponding names.
  */
-function getLanguages()
-{
+function getLanguages() {
     // Sorted by value
     $languages = array(
         'id_ID' => 'Bahasa Indonesia',
@@ -331,6 +387,34 @@ $file_footer = <<<EOD
 EOD;
 
     return $file_footer;
+}
+
+
+/**
+ * ECHO a (colored) message to the screen
+ *
+ * @param string $message The message to be displayed
+ * @param string $type (i)nfo = BLUE, (w)arning = YELLOW, (e)rror = RED or (s)uccess = GREEN
+ *
+ */
+function echoMessage($message, $type = ''){
+    switch ($type) {
+        case 'e': // error RED
+            echo "\033[31m$message \033[0m\n";
+        break;
+        case 's': // success GREEN
+            echo "\033[32m$message \033[0m\n";
+        break;
+        case 'w': // warning YELLOW
+            echo "\033[33m$message \033[0m\n";
+        break;
+        case 'i': // info BLUE
+            echo "\033[36m$message \033[0m\n";
+        break;
+        default: // white
+            echo "$message\n";
+        break;
+    }
 }
 
 /**
