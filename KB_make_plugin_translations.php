@@ -282,7 +282,7 @@ function getLangKeys($lang_file) {
             }
         }
         if (!feof($handle)) {
-            echo "Fehler: unerwarteter fgets() Fehlschlag\n";
+            mpt_die('Error while reading ' . $lang_file);
         }
         fclose($handle);
     }
@@ -330,7 +330,7 @@ function getTranslations($lang_file) {
             }
         }
         if (!feof($handle)) {
-            echo "Fehler: unerwarteter fgets() Fehlschlag\n";
+            mpt_die('Error while reading ' . $lang_file);
         }
         fclose($handle);
     }
@@ -377,7 +377,7 @@ function getScriptKeys($script_file) {
 
 
         if (!feof($handle)) {
-            echo "Fehler: unerwarteter fgets() Fehlschlag\n";
+            mpt_die('Error while reading ' . $script_file);
         }
         fclose($handle);
     }
@@ -394,13 +394,13 @@ function getScriptKeys($script_file) {
 function makeTranslation($lang_file, $trans_keys, $translated_keys = array('foo' => 'bar'), $prepare_translation = FALSE) {
     // try opening file in WRITE-mode
     if (!$handle = fopen($lang_file, 'w')) {
-        die('ERROR');
+        mpt_die('Error while trying to create/update ' . $lang_file);
     };
 
 
     // generate PHP opening-tags and required code for the array ...
     if (!fwrite($handle, getTransHeader())) {
-        die('ERROR');
+        mpt_die('Error while trying to write to ' . $lang_file);
     }
         // now let's iterate over the keys to get translated and generate the code
         foreach ($trans_keys as $trans_key) {
@@ -412,13 +412,13 @@ function makeTranslation($lang_file, $trans_keys, $translated_keys = array('foo'
                 $trans_line .= "'$trans_key' => ''," . PHP_EOL;
             }
             if (!fwrite($handle, $trans_line)) {
-                die('ERROR');
+                mpt_die('Error while trying to write to ' . $lang_file);
             }
         }
 
     // generate final code and colse the file-handle
     if (!fwrite($handle, getTransFooter())) {
-        die('ERROR');
+        mpt_die('Error while trying to close ' . $lang_file);
     }
     fclose($handle);
 
