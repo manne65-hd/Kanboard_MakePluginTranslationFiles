@@ -90,11 +90,15 @@ initialize($my_plugin_folder, $my_plugin_langs, $prepare_all_other_langs, $log_t
 // get all language keys from Kanboard's "master-language"(french translation)
 $kb_lang_keys = getLangKeys($mpt_config['kb_master_lang']);
 //dd($kb_lang_keys);
-dd($mpt_config['translate_plugin']);
+//dd($mpt_config['translate_plugin']);
+
+$test = $mpt_config['translate_plugin'] . '\Locale\de_DE\translations.php';
+$translated_keys = getTranslations($test);
+//dd($german_trans);
 
 // get a list of all PHP-files in the plugin's directory-tree
 $plugin_scripts = getPluginScripts($mpt_config['translate_plugin']);
-dd($plugin_scripts);
+//dd($plugin_scripts);
 
 
 // find and extract UNIQUE language-keys for all scripts
@@ -130,7 +134,7 @@ $translate_plugin_lang_keys = array_diff($unique_plugin_lang_keys, $kb_lang_keys
 //ddd($translate_plugin_lang_keys);
 
 
-makeTranslation($translate_plugin_lang_keys);
+makeTranslation($translate_plugin_lang_keys, $translated_keys);
 
 
 
@@ -248,6 +252,54 @@ function getLangKeys($lang_file) {
 }
 
 /**
+ * Return an array of the existing translations of a given language
+ *
+ * @param string $lang_file Script to search for translations
+ *
+ * @return array Associative array with [$lang_key] => [$translation]
+ */
+function getTranslations($lang_file) {
+    $translated_keys = array();
+
+    $handle = @fopen($lang_file, "r");
+    if ($handle) {
+        while (($buffer = fgets($handle, 4096)) !== false) {
+            $extract = explode('=>', $buffer);
+            $key_found = FALSE;
+            if (substr(trim($extract[0]), 0, 1) === "'") {
+                // strip off whitespaces
+                $lang_key = trim($extract[0]);
+                // strip off leading '
+                $lang_key = substr($lang_key, 1);
+                // strip off trailing '
+                $lang_key = substr($lang_key, 0, -1);
+
+                // let's extract the translation
+                if (substr(trim($extract[1]), 0, 1) === "'") {
+                    // strip off whitespaces
+                    $translation = trim($extract[1]);
+                    // strip off leading '
+                    $translation = substr($translation, 1);
+                    // strip off trailing '
+                    $translation = substr($translation, 0, -2);
+                }
+
+                $key_found = TRUE;
+            }
+            // add lang_key and translation to the list
+            if ($key_found) {
+                $translated_keys[$lang_key] = $translation;
+            }
+        }
+        if (!feof($handle)) {
+            echo "Fehler: unerwarteter fgets() Fehlschlag\n";
+        }
+        fclose($handle);
+    }
+    return $translated_keys;
+}
+
+/**
  * Return an array of language-keys used in the given script
  *
  * @param string $script_file Script to search for calls to the translate-function t('foo')
@@ -302,9 +354,9 @@ function getScriptKeys($script_file) {
  *
  * @return bool TRUE if successful or else > FALSE
  */
-function makeTranslation($trans_keys) {
+function makeTranslation($trans_keys, $translated_keys = array()) {
     // try opening file in WRITE-mode
-    if (!$handle = fopen('translations.php', 'w')) {
+    if (!$handle = fopen('logs/translations.php', 'w')) {
         die('ERROR');
     };
 
@@ -315,8 +367,13 @@ function makeTranslation($trans_keys) {
     }
         // now let's iterate over the keys to get translated and generate the code
         foreach ($trans_keys as $trans_key) {
-            //$key_line = "    '$trans_key' => ''" . PHP_EOL;
-            if (!fwrite($handle, "    '$trans_key' => ''," . PHP_EOL)) {
+            // Check if current lang_key has already been translated
+            if (array_key_exists($trans_key, $translated_keys)) {
+                $trans_line = "    '$trans_key' => '$translated_keys[$trans_key]'," . PHP_EOL;
+            } else {
+                $trans_line = "    '$trans_key' => ''," . PHP_EOL;
+            }
+            if (!fwrite($handle, $trans_line)) {
                 die('ERROR');
             }
         }
