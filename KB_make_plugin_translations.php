@@ -31,7 +31,8 @@ $my_plugin_langs = array(
      'zz_ZZ',
 );
 $my_plugin_langs = array(
-    'prepare_only',
+    'de_DE',
+    'de_DE_du'
 );
 
 /* set to TRUE if you want to "prepare" translations for all other languages.
