@@ -6,7 +6,7 @@
 ** in your plugin and generate/update translation-files for it.
 ** -----------------------------------------------------------------------------
 ** @Author: Manfred Hoffmann
-** @Version: 0.0.1 (2021-05-02)
+** @Version: 0.1.0 (2021-05-03)
 ** -----------------------------------------------------------------------------
 ********************************************************************************/
 
@@ -34,7 +34,7 @@ $my_plugin_langs = array(
 $prepare_all_other_langs = FALSE;
 
 // set to TRUE if you want to generate a LOG-file of the process
-$log_to_file = FALSE;
+$log_to_file = FALSE; // not implemeted yet!!
 
 /*==============================================================================
  *                           END of configuration
@@ -149,14 +149,47 @@ $translate_plugin_lang_keys = array_diff($plugin_unique_lang_keys, $kb_lang_keys
  *          - write new/updated translations.php
  *            (preserving existing translations and adding new ones!)
  *      - DONE ITERATING $mpt_config['my_plugin_langs']
+ *      - IF $prepare_all_other_langs = TRUE
+ *          - ITERATE over all other languages
+ *              - get (existing) translations for the current language
+ *              - write new/updated translations.php
+ *                NEW language-keys will be commented out!
+ *                ... but existing translations are preserved and stay active
+ *          - DONE ITERATING all other languages
  *-----------------------------------------------------------------------------*/
+
 
 foreach ($mpt_config['my_plugin_langs'] as $translate_lang) {
     $translation_file = $mpt_config['translate_plugin'] . '\Locale\\' . $translate_lang . '\translations.php';
     $translation_keys = getTranslations($translation_file);
+
+    // we might have to create the folder first ...
+    $translation_folder = dirname($translation_file);
+    if (!file_exists($translation_folder)) {
+        mkdir($translation_folder);
+    }
+
     makeTranslation($translation_file, $translate_plugin_lang_keys, $translation_keys);
 }
 
+if ($mpt_config['prep_other_langs']) {
+    $prepare_other_langs = otherLangs();
+    foreach ($prepare_other_langs as $translate_lang => $lang_name) {
+        $translation_file = $mpt_config['translate_plugin'] . '\Locale\\' . $translate_lang . '\translations.php';
+        $translation_keys = getTranslations($translation_file);
+
+        // we might have to create the folder first ...
+        $translation_folder = dirname($translation_file);
+        if (!file_exists($translation_folder)) {
+            mkdir($translation_folder);
+        }
+
+        makeTranslation($translation_file, $translate_plugin_lang_keys, $translation_keys, PREPARE_TRANSLATION);
+    }
+}
+
+echoMessage('Succesfully generated translation-files', 's');
+// done and dusted for NOW ... let's go BETA
 
 /*******************************************************************************
 ********************************************************************************
@@ -175,6 +208,7 @@ foreach ($mpt_config['my_plugin_langs'] as $translate_lang) {
 function initialize($my_plugin_folder, $my_plugin_langs, $prepare_all_other_langs, $log_to_file) {
     global $mpt_config;
     global $kb_lang_model;
+    define('PREPARE_TRANSLATION', TRUE);
 
     // assign config-variables assigned by user to global config-array
     $mpt_config['my_plugin_folder'] = $my_plugin_folder;
@@ -357,7 +391,7 @@ function getScriptKeys($script_file) {
  *
  * @return bool TRUE if successful or else > FALSE
  */
-function makeTranslation($lang_file, $trans_keys, $translated_keys = array('foo' => 'bar')) {
+function makeTranslation($lang_file, $trans_keys, $translated_keys = array('foo' => 'bar'), $prepare_translation = FALSE) {
     // try opening file in WRITE-mode
     if (!$handle = fopen($lang_file, 'w')) {
         die('ERROR');
@@ -374,7 +408,8 @@ function makeTranslation($lang_file, $trans_keys, $translated_keys = array('foo'
             if (array_key_exists($trans_key, $translated_keys)) {
                 $trans_line = "    '$trans_key' => '$translated_keys[$trans_key]'," . PHP_EOL;
             } else {
-                $trans_line = "    '$trans_key' => ''," . PHP_EOL;
+                $trans_line  = ($prepare_translation) ? "    // " : "    ";
+                $trans_line .= "'$trans_key' => ''," . PHP_EOL;
             }
             if (!fwrite($handle, $trans_line)) {
                 die('ERROR');
@@ -513,6 +548,23 @@ function checkLangsValid() {
             mpt_die($my_plugin_lang . ' is not a valid language-code!');
         }
     }
+}
+
+/**
+ * Return all language-codes EXCEPT for those configured in $my_plugin_langs
+ *
+ * @return array
+ */
+function otherLangs() {
+    global $mpt_config;
+    $other_langs = array();
+
+    foreach($mpt_config['kb_all_langs'] as $lang_key => $lang_name) {
+        if(! in_array($lang_key, $mpt_config['my_plugin_langs'])) {
+            $other_langs[$lang_key] = $lang_name;
+        }
+    }
+    return $other_langs;
 }
 
 /**
