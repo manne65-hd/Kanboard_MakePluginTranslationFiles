@@ -13,8 +13,36 @@ List of features
 
 Screenshots
 -----------
+Basic CommandLine-Interface implemeted
 
-No screenshots yet
+![01-CommandLineInterface](https://user-images.githubusercontent.com/48651533/116916627-e044da00-ac4d-11eb-826d-925145fb02d7.png)
+
+
+Outdated LanguageFile before using my script
+
+![02-Outdated-LanguageFile](https://user-images.githubusercontent.com/48651533/116916867-29952980-ac4e-11eb-8ec4-a09f7eccf3ce.png)
+
+
+Updated Language-File after using my script ... exsiting translations are still intact, new language-keys have been added
+
+![03-Updated-LanguageFile](https://user-images.githubusercontent.com/48651533/116916975-50ebf680-ac4e-11eb-8553-bd721f710560.png)
+
+
+Used the option `$prepare_all_other_langs = TRUE;` ... translation-files have been "prepared" to be translated by others
+
+![04-PreparedForeign-LanguageFile](https://user-images.githubusercontent.com/48651533/116917272-b9d36e80-ac4e-11eb-9e7a-6be16b819e60.png)
+
+
+Imagine someone else has made PRs to your plugin to translate one of the "prepared" languages _(that are foreign to you)_
+
+![05-TranslatedForeign-LanguageFile](https://user-images.githubusercontent.com/48651533/116917421-ef785780-ac4e-11eb-9155-ca8f5a5c6c48.png)
+
+
+After further development of your plugin, you rerun the script and NEW language-keys are again "prepared" into the "foreign" language-files, while still preserving the existing translations
+
+![06-UpdatedTranslatedForeign-LanguageFile](https://user-images.githubusercontent.com/48651533/116917622-2e0e1200-ac4f-11eb-94a1-787a58c022b0.png)
+
+
 
 ToDo ...
 --------
