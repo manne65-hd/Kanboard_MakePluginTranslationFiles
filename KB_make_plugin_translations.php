@@ -22,17 +22,17 @@ $my_plugin_folder = 'AdvancedCardOptions'; // CASE-sensitive!
 
 /* array of language-codes for which you want to offer translations
  * MUST be a vaild code as available in Kanboard/app/Model/LanguageModel.php */
- $my_plugin_langs = array(
+$my_plugin_langs = array(
      'xy_XY',
      'zz_ZZ',
- );
- $my_plugin_langs = array(
+);
+$my_plugin_langs = array(
      'de_DE',
      'de_DE_du',
- );
+);
 
-/* set to TRUE if you want to prepare translations for all other languages
- * this will generate language-files with all statements commented out like:
+/* set to TRUE if you want to prepare translations for all other languages.
+ * This will generate language-files with all statements commented out like:
  *    // 'Your first term' => '',
  *    // 'another term' => '',
  */
@@ -76,30 +76,48 @@ define('NON_CLI_DIE_MESSAGE', 'This script can only be run in CommandLineMode!')
 // make sure the script only runs when called via CLI otherwise > DIE!
 //(PHP_SAPI !== 'cli' || isset($_SERVER['HTTP_USER_AGENT'])) && die(NON_CLI_DIE_MESSAGE);
 
-// Let's start ...
+/* -----------------------------------------------------------------------------
+ * Let's start ...
+ *      - setup required variables
+ *      - check user-parameters for validity
+ *-----------------------------------------------------------------------------*/
 $mpt_config = array();
 $my_plugin_folder        = (isset($my_plugin_folder)) ? $my_plugin_folder : '';
-$my_plugin_langs         = (isset($my_plugin_langs)) ? $my_plugin_langs : array();
+$my_plugin_langs         = (isset($my_plugin_langs)) ? $my_plugin_langs : FALSE;
 $prepare_all_other_langs = (isset($prepare_all_other_langs)) ? $prepare_all_other_langs : FALSE;
 $log_to_file             = (isset($log_to_file)) ? $log_to_file : FALSE;
 initialize($my_plugin_folder, $my_plugin_langs, $prepare_all_other_langs, $log_to_file);
 
-//ddd($mpt_config);
-//echoMessage('KB_make_plugin_translations Version 0.0.1 by manne65hd', 's');
+// check if $my_plugin_folder is an(existing) folder
+if ($my_plugin_folder === 'My_KanboardPlugin') {
+    echoMessage('You must configure the script by setting the variable $my_plugin_folder!', 'w');
+    die;
+} else {
+    if (file_exists($mpt_config['translate_plugin'])) {
+        if (!is_dir($mpt_config['translate_plugin'])) {
+                mpt_die('Not a folder!');
+            }
+    } else {
+        mpt_die('Folder not found!');
+    }
+}
 
+// check if $my_plugin_langs contains (ONLY) valid language-codes
+checkLangsValid();
+
+/* -----------------------------------------------------------------------------
+ * Find and extract all language keys ...
+ *      - get all language keys from Kanboard
+ *      - get a list of all PHP-files in the plugin's directory-tree
+ *      - find and extract UNIQUE language-keys for all scripts
+ *      - MERGE them into one UNIQUE array without multiple occurences
+ *      - and finally REMOVE all Kanboard-core-lang-keys!
+ *-----------------------------------------------------------------------------*/
 // get all language keys from Kanboard's "master-language"(french translation)
 $kb_lang_keys = getLangKeys($mpt_config['kb_master_lang']);
-//dd($kb_lang_keys);
-//dd($mpt_config['translate_plugin']);
-
-$test = $mpt_config['translate_plugin'] . '\Locale\de_DE\translations.php';
-$translated_keys = getTranslations($test);
-//dd($german_trans);
 
 // get a list of all PHP-files in the plugin's directory-tree
 $plugin_scripts = getPluginScripts($mpt_config['translate_plugin']);
-//dd($plugin_scripts);
-
 
 // find and extract UNIQUE language-keys for all scripts
 $script_lang_keys = array();
@@ -107,43 +125,50 @@ foreach ($plugin_scripts as $plugin_script) {
     //$script_lang_keys[] = getLangTerms($plugin_script);
     $script_lang_keys[] = getScriptKeys($plugin_script);
 }
-//dd($script_lang_keys);
 
-// MERGE all $script_lang_keys into $all_plugin_lang_keys
-$all_plugin_lang_keys = array();
+// MERGE all $script_lang_keys into $plugin_all_lang_keys
+$plugin_all_lang_keys = array();
 foreach ($script_lang_keys as $merge_keys) {
-    if (count($all_plugin_lang_keys) === 0 ) {
+    if (count($plugin_all_lang_keys) === 0 ) {
         if ($merge_keys['lang_keys']) {
-            $all_plugin_lang_keys = $merge_keys['lang_keys'];
+            $plugin_all_lang_keys = $merge_keys['lang_keys'];
         }
     } else {
         if ($merge_keys['lang_keys']) {
-            $all_plugin_lang_keys = array_merge($all_plugin_lang_keys, $merge_keys['lang_keys']);
+            $plugin_all_lang_keys = array_merge($plugin_all_lang_keys, $merge_keys['lang_keys']);
         }
     }
 }
-//dd($all_plugin_lang_keys);
 
-// make unique ...
-$unique_plugin_lang_keys = array_unique($all_plugin_lang_keys);
-//dd($unique_plugin_lang_keys);
+// REMOVE multiple occurences of the same lang_keys
+$plugin_unique_lang_keys = array_unique($plugin_all_lang_keys);
 
-// and finally remove all Kanboard-language-keys, thus returning only
+// and finally REMOVE all Kanboard-language-keys, thus returning only
 // language-keys specific for this plugin, that actually need translation!
-$translate_plugin_lang_keys = array_diff($unique_plugin_lang_keys, $kb_lang_keys);
-//ddd($translate_plugin_lang_keys);
+$translate_plugin_lang_keys = array_diff($plugin_unique_lang_keys, $kb_lang_keys);
 
+/* -----------------------------------------------------------------------------
+ * Let's start generating translation-files ...
+ *      - ITERATE $mpt_config['my_plugin_langs']
+ *          - get (existing) translations for the current language
+ *          - write new/updated translations.php
+ *            (preserving existing translations and adding new ones!)
+ *      - DONE ITERATING $mpt_config['my_plugin_langs']
+ *-----------------------------------------------------------------------------*/
 
-makeTranslation($translate_plugin_lang_keys, $translated_keys);
+//makeTranslation('logs/translations.php', $translate_plugin_lang_keys, $translated_keys);
+makeTranslation('logs/translations.php', $translate_plugin_lang_keys);
 
 
 
 
 /*******************************************************************************
-**                                                                            **
-**         All required functions included in a self-contained script         **
-**        ============================================================        **
-**                                                                            **
+********************************************************************************
+*****                                                                      *****
+*****      All required functions included in a self-contained script      *****
+*****     ============================================================     *****
+*****                                                                      *****
+********************************************************************************
 *******************************************************************************/
 
 /**
@@ -199,23 +224,6 @@ function getPluginScripts($plugin_folder) {
         }
 
     return $plugin_scripts;
-}
-
-/**
- * Check if HAYSTACK contains at least one NEEDLE from an array of NEEDLES
- *
- * @param string $haystack HAYSTACK to search in
- * @param array $needles Needles to search for
- * @param int $offset (optional) position to start the search within haystack
- *
- * @return bool
- */
-function haystackHasNeedle($haystack, $needles, $offset=0) {
-    if(!is_array($needles)) $needles = array($needles);
-    foreach($needles as $needle) {
-        if(strpos($haystack, $needle, $offset) !== false) return true; // stop on first true result
-    }
-    return false;
 }
 
 /**
@@ -311,13 +319,12 @@ function getScriptKeys($script_file) {
     $lang_keys['script_file'] = $script_file;
     $all_lang_keys['lang_keys'] = array();
     // REGEXpression to find language-keys
-    $regx_find_langterm = '/(?<=t\(\')(.*?)(?=\'\))/m';
-    $regx_find_langterm = '/(?<= t\(\')(.*?)(?=\')/m';
+    $regx_find_lang_keys = '/(?<= t\(\')(.*?[^\\\\])(?=\')/m';  // Thanks to DrDeath :-D ( https://github.com/DrDeath )
 
     $handle = @fopen($script_file, "r");
     if ($handle) {
         while (($buffer = fgets($handle, 4096)) !== false) {
-            preg_match_all($regx_find_langterm, $buffer, $matches, PREG_SET_ORDER, 0);
+            preg_match_all($regx_find_lang_keys, $buffer, $matches, PREG_SET_ORDER, 0);
             if ( count($matches) ) {
                 //dd($matches[0][0]);
                 $all_lang_keys['lang_keys'][] = $matches[0][0];
@@ -354,9 +361,9 @@ function getScriptKeys($script_file) {
  *
  * @return bool TRUE if successful or else > FALSE
  */
-function makeTranslation($trans_keys, $translated_keys = array()) {
+function makeTranslation($lang_file, $trans_keys, $translated_keys = array('foo' => 'bar')) {
     // try opening file in WRITE-mode
-    if (!$handle = fopen('logs/translations.php', 'w')) {
+    if (!$handle = fopen($lang_file, 'w')) {
         die('ERROR');
     };
 
@@ -468,6 +475,49 @@ EOD;
     return $file_footer;
 }
 
+/**
+ * Check if HAYSTACK contains at least one NEEDLE from an array of NEEDLES
+ *
+ * @param string $haystack HAYSTACK to search in
+ * @param array $needles Needles to search for
+ * @param int $offset (optional) position to start the search within haystack
+ *
+ * @return bool
+ */
+function haystackHasNeedle($haystack, $needles, $offset=0) {
+    if(!is_array($needles)) $needles = array($needles);
+    foreach($needles as $needle) {
+        if(strpos($haystack, $needle, $offset) !== false) return true; // stop on first true result
+    }
+    return false;
+}
+
+/**
+ * Check if all languages given by $my_plugin_langs are valid
+ * ... otherwise DIE with an ERROR-message
+ *
+ */
+function checkLangsValid() {
+    global $mpt_config;
+
+    $example_plugin_langs = array(
+        'xy_XY',
+        'zz_ZZ',
+    );
+    if (! array_diff($mpt_config['my_plugin_langs'], $example_plugin_langs)) {
+        echoMessage('You must configure the script by setting the array $my_plugin_langs!', 'w');
+        die;
+    }
+
+    if(! is_array($mpt_config['my_plugin_langs'])) {
+        mpt_die('$my_plugin_langs MUST be an array!');
+    }
+    foreach($mpt_config['my_plugin_langs'] as $my_plugin_lang) {
+        if(! array_key_exists($my_plugin_lang, $mpt_config['kb_all_langs'])) {
+            mpt_die($my_plugin_lang . ' is not a valid language-code!');
+        }
+    }
+}
 
 /**
  * ECHO a (colored) message to the screen
@@ -494,6 +544,17 @@ function echoMessage($message, $type = ''){
             echo "$message\n";
         break;
     }
+}
+
+/**
+ * DIE with ERROR-message
+ *
+ * @param string $message The ERROR-message to be displayed
+ *
+ */
+function mpt_die($error){
+    echoMessage($error, 'e');
+    die;
 }
 
 /**
