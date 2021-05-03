@@ -42,7 +42,7 @@ Installation & Usage
   2. Clone the repo into that folder
 
 - Set some parameters by editing the script
-```
+```php
     /*==============================================================================
      *                          START of configuration
      *                         ------------------------
