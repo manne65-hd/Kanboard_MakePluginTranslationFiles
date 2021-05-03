@@ -29,4 +29,9 @@ Requirements
 
 Installation
 ------------
-Download **KB_make_plugin_translations.php** and put it into the root-folder of your plugin under development
+- Manual installation
+  1. Create a new folder **_KB_make_plugin_translations** inside the root of your kanboard-development-Installation
+  2. Download and unzip all files into that folder
+- Clone from github
+  1. Create a new folder **_KB_make_plugin_translations** inside the root of your kanboard-development-Installation
+  2. Clone the repo into that folder
