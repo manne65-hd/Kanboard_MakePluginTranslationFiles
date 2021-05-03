@@ -56,14 +56,13 @@ $log_to_file = FALSE; // not implemeted yet!!
 
 
 
-/* let's try to use the LanguageModel from Kanboard later
+/* let's try to use the LanguageModel from Kanboard later(if that is possible)
 
 use Kanboard\Model\LanguageModel;
 require_once __DIR__.'/../app/Core/Base.php';
 require_once __DIR__.'/../app/MOdel/LanguageModel.php';
 $kb_lang_model = new languageModel;
 */
-$kb_lang_model = FALSE;
 
 // DIE-message when called via browser
 define('NON_CLI_DIE_MESSAGE', 'This script can only be run in CommandLineMode!');
@@ -224,6 +223,7 @@ function initialize($my_plugin_folder, $my_plugin_langs, $prepare_all_other_lang
     $mpt_config['translate_plugin'] = $mpt_config['path_plugins'] . '\\' . $mpt_config['my_plugin_folder'];
 
     // get all available languages in Kanboard
+    //$mpt_config['kb_all_langs'] = $kb_lang_model->getLanguages(); // don't know if this can even be done
     $mpt_config['kb_all_langs'] = getLanguages();
 
 }
