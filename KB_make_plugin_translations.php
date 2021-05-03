@@ -16,26 +16,30 @@
  * BELOW you'll find some parameters you'll have to adjust,
  * in order to configure this script.
  *============================================================================*/
-// foldername of the plugin for which you want to prepare/update translations
+// foldername of the plugin for which you want to generate/update translations
 $my_plugin_folder = 'My_TestPlugin'; // CASE-sensitive!
 
 /* array of language-codes for which you want to offer translations
- * MUST be a vaild code as available in Kanboard/app/Model/LanguageModel.php */
+ * MUST be a vaild code as available in Kanboard/app/Model/LanguageModel.php
+ * ! SPECIAL CASE !
+ *  If you don't want to translate, but ONLY "prepare" language-files:
+ *  - Populate the $my_plugin_langs-array with a single element: 'prepare_only'
+ *  - set $prepare_all_other_langs = TRUE;
+  */
 $my_plugin_langs = array(
      'xy_XY',
      'zz_ZZ',
 );
 $my_plugin_langs = array(
-    'de_DE',
-    'de_DE_du',
+    'prepare_only',
 );
 
-/* set to TRUE if you want to prepare translations for all other languages.
+/* set to TRUE if you want to "prepare" translations for all other languages.
  * This will generate language-files with all statements commented out like:
  *    // 'Your first term' => '',
  *    // 'another term' => '',
  */
-$prepare_all_other_langs = FALSE;
+$prepare_all_other_langs = TRUE;
 
 // set to TRUE if you want to generate a LOG-file of the process
 $log_to_file = FALSE; // not implemeted yet!!
@@ -100,8 +104,13 @@ if ($my_plugin_folder === 'My_KanboardPlugin') {
     }
 }
 
-// check if $my_plugin_langs contain(ONLY) valid language-codes
-checkLangsValid();
+// check if $my_plugin_langs contains(ONLY) valid language-codes
+if (implode($mpt_config['my_plugin_langs']) === 'prepare_only') {
+    // OK ... you only want to "prepare" language-files
+    $mpt_config['gen_translation'] = FALSE;
+} else {
+    checkLangsValid();
+}
 
 /* -----------------------------------------------------------------------------
  * Find and extract all language keys ...
@@ -147,11 +156,13 @@ $translate_plugin_lang_keys = array_diff($plugin_unique_lang_keys, $kb_lang_keys
 
 /* -----------------------------------------------------------------------------
  * Let's start generating translation-files ...
- *      - ITERATE $mpt_config['my_plugin_langs']
- *          - get (existing) translations for the current language
- *          - write new/updated translations.php
- *            (preserving existing translations and adding new ones!)
- *      - DONE ITERATING $mpt_config['my_plugin_langs']
+ *      - IF $mpt_config['gen_translation'] = TRUE
+ *          - ITERATE $mpt_config['my_plugin_langs']
+ *              - get (existing) translations for the current language
+ *              - write new/updated translations.php
+ *                (preserving existing translations and adding new ones!)
+ *          - DONE ITERATING $mpt_config['my_plugin_langs']
+ *
  *      - IF $prepare_all_other_langs = TRUE
  *          - ITERATE over all other languages
  *              - get (existing) translations for the current language
@@ -162,17 +173,19 @@ $translate_plugin_lang_keys = array_diff($plugin_unique_lang_keys, $kb_lang_keys
  *-----------------------------------------------------------------------------*/
 
 
-foreach ($mpt_config['my_plugin_langs'] as $translate_lang) {
-    $translation_file = $mpt_config['translate_plugin'] . '\Locale\\' . $translate_lang . '\translations.php';
-    $translation_keys = getTranslations($translation_file);
+if ($mpt_config['gen_translation']) {
+    foreach ($mpt_config['my_plugin_langs'] as $translate_lang) {
+        $translation_file = $mpt_config['translate_plugin'] . '\Locale\\' . $translate_lang . '\translations.php';
+        $translation_keys = getTranslations($translation_file);
 
-    // we might have to create the folder first ...
-    $translation_folder = dirname($translation_file);
-    if (!file_exists($translation_folder)) {
-        mkdir($translation_folder);
+        // we might have to create the folder first ...
+        $translation_folder = dirname($translation_file);
+        if (!file_exists($translation_folder)) {
+            mkdir($translation_folder);
+        }
+
+        makeTranslation($translation_file, $translate_plugin_lang_keys, $translation_keys);
     }
-
-    makeTranslation($translation_file, $translate_plugin_lang_keys, $translation_keys);
 }
 
 if ($mpt_config['prep_other_langs']) {
@@ -225,6 +238,9 @@ function initialize($my_plugin_folder, $my_plugin_langs, $prepare_all_other_lang
     $mpt_config['path_locales']     = $mpt_config['path_kb_root'] . '\app\Locale';
     $mpt_config['kb_master_lang']   = $mpt_config['path_kb_root'] . '\app\Locale\fr_FR\translations.php';
     $mpt_config['translate_plugin'] = $mpt_config['path_plugins'] . '\\' . $mpt_config['my_plugin_folder'];
+
+    // allow to generate NO translations, but instead ONLY "prepare" all $languages
+    $mpt_config['gen_translation'] = TRUE;
 
     // get all available languages in Kanboard
     //$mpt_config['kb_all_langs'] = $kb_lang_model->getLanguages(); // don't know if this can even be done
