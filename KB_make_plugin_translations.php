@@ -18,17 +18,12 @@
  *============================================================================*/
 // foldername of the plugin for which you want to prepare/update translations
 $my_plugin_folder = 'My_KanboardPlugin'; // CASE-sensitive!
-$my_plugin_folder = 'AdvancedCardOptions'; // CASE-sensitive!
 
 /* array of language-codes for which you want to offer translations
  * MUST be a vaild code as available in Kanboard/app/Model/LanguageModel.php */
 $my_plugin_langs = array(
      'xy_XY',
      'zz_ZZ',
-);
-$my_plugin_langs = array(
-     'de_DE',
-     'de_DE_du',
 );
 
 /* set to TRUE if you want to prepare translations for all other languages.
@@ -74,7 +69,7 @@ $kb_lang_model = FALSE;
 define('NON_CLI_DIE_MESSAGE', 'This script can only be run in CommandLineMode!');
 
 // make sure the script only runs when called via CLI otherwise > DIE!
-//(PHP_SAPI !== 'cli' || isset($_SERVER['HTTP_USER_AGENT'])) && die(NON_CLI_DIE_MESSAGE);
+(PHP_SAPI !== 'cli' || isset($_SERVER['HTTP_USER_AGENT'])) && die(NON_CLI_DIE_MESSAGE);
 
 /* -----------------------------------------------------------------------------
  * Let's start ...
@@ -102,7 +97,7 @@ if ($my_plugin_folder === 'My_KanboardPlugin') {
     }
 }
 
-// check if $my_plugin_langs contains (ONLY) valid language-codes
+// check if $my_plugin_langs contain(ONLY) valid language-codes
 checkLangsValid();
 
 /* -----------------------------------------------------------------------------
@@ -156,10 +151,11 @@ $translate_plugin_lang_keys = array_diff($plugin_unique_lang_keys, $kb_lang_keys
  *      - DONE ITERATING $mpt_config['my_plugin_langs']
  *-----------------------------------------------------------------------------*/
 
-//makeTranslation('logs/translations.php', $translate_plugin_lang_keys, $translated_keys);
-makeTranslation('logs/translations.php', $translate_plugin_lang_keys);
-
-
+foreach ($mpt_config['my_plugin_langs'] as $translate_lang) {
+    $translation_file = $mpt_config['translate_plugin'] . '\Locale\\' . $translate_lang . '\translations.php';
+    $translation_keys = getTranslations($translation_file);
+    makeTranslation($translation_file, $translate_plugin_lang_keys, $translation_keys);
+}
 
 
 /*******************************************************************************
