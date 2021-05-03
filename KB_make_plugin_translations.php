@@ -25,6 +25,10 @@ $my_plugin_langs = array(
      'xy_XY',
      'zz_ZZ',
 );
+$my_plugin_langs = array(
+     'de_DE',
+     'de_DE_du',
+);
 
 /* set to TRUE if you want to prepare translations for all other languages.
  * This will generate language-files with all statements commented out like:
