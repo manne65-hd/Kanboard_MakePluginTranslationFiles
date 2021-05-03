@@ -18,23 +18,28 @@
  *============================================================================*/
 // foldername of the plugin for which you want to prepare/update translations
 $my_plugin_folder = 'My_KanboardPlugin'; // CASE-sensitive!
+$my_plugin_folder = 'AdvancedCardOptions'; // CASE-sensitive!
 
 /* array of language-codes for which you want to offer translations
  * MUST be a vaild code as available in Kanboard/app/Model/LanguageModel.php */
-$my_plugin_langs = array(
-    'xy_XY',
-    'zz_ZZ',
-);
+ $my_plugin_langs = array(
+     'xy_XY',
+     'zz_ZZ',
+ );
+ $my_plugin_langs = array(
+     'de_DE',
+     'de_DE_du',
+ );
 
 /* set to TRUE if you want to prepare translations for all other languages
  * this will generate language-files with all statements commented out like:
  *    // 'Your first term' => '',
  *    // 'another term' => '',
  */
-$prepare_all_other_langs = TRUE;
+$prepare_all_other_langs = FALSE;
 
 // set to TRUE if you want to generate a LOG-file of the process
-$log_to_file = TRUE;
+$log_to_file = FALSE;
 
 /*==============================================================================
  *                           END of configuration
@@ -56,7 +61,17 @@ $log_to_file = TRUE;
 
 
 
- define('NON_CLI_DIE_MESSAGE', 'This script can only be run in CommandLineMode!');
+/* let's try to use the LanguageModel from Kanboard later
+
+use Kanboard\Model\LanguageModel;
+require_once __DIR__.'/../app/Core/Base.php';
+require_once __DIR__.'/../app/MOdel/LanguageModel.php';
+$kb_lang_model = new languageModel;
+*/
+$kb_lang_model = FALSE;
+
+// DIE-message when called via browser
+define('NON_CLI_DIE_MESSAGE', 'This script can only be run in CommandLineMode!');
 
 // make sure the script only runs when called via CLI otherwise > DIE!
 //(PHP_SAPI !== 'cli' || isset($_SERVER['HTTP_USER_AGENT'])) && die(NON_CLI_DIE_MESSAGE);
@@ -69,14 +84,17 @@ $prepare_all_other_langs = (isset($prepare_all_other_langs)) ? $prepare_all_othe
 $log_to_file             = (isset($log_to_file)) ? $log_to_file : FALSE;
 initialize($my_plugin_folder, $my_plugin_langs, $prepare_all_other_langs, $log_to_file);
 
-ddd($mpt_config);
+//ddd($mpt_config);
 //echoMessage('KB_make_plugin_translations Version 0.0.1 by manne65hd', 's');
 
-// get all language keys from kanboard(french translation)
-$kb_lang_keys = getLangKeys($mpt_config['kb_lang']);
+// get all language keys from Kanboard's "master-language"(french translation)
+$kb_lang_keys = getLangKeys($mpt_config['kb_master_lang']);
+//dd($kb_lang_keys);
+dd($mpt_config['translate_plugin']);
 
 // get a list of all PHP-files in the plugin's directory-tree
-$plugin_scripts = getPluginScripts();
+$plugin_scripts = getPluginScripts($mpt_config['translate_plugin']);
+dd($plugin_scripts);
 
 
 // find and extract UNIQUE language-keys for all scripts
@@ -131,18 +149,23 @@ makeTranslation($translate_plugin_lang_keys);
  */
 function initialize($my_plugin_folder, $my_plugin_langs, $prepare_all_other_langs, $log_to_file) {
     global $mpt_config;
+    global $kb_lang_model;
 
     // assign config-variables assigned by user to global config-array
     $mpt_config['my_plugin_folder'] = $my_plugin_folder;
-    $mpt_config['my_plugin_langs'] = $my_plugin_langs;
+    $mpt_config['my_plugin_langs']  = $my_plugin_langs;
     $mpt_config['prep_other_langs'] = $prepare_all_other_langs;
-    $mpt_config['log_to_file'] = $log_to_file;
+    $mpt_config['log_to_file']      = $log_to_file;
 
     // setup basic paths & files
-    $mpt_config['path_plugins'] = dirname(__DIR__);
-    $mpt_config['path_kb_root'] = dirname($mpt_config['path_plugins']);
-    $mpt_config['path_locales'] = $mpt_config['path_kb_root'] . '\app\Locale';
-    $mpt_config['kb_lang'] = $mpt_config['path_kb_root'] . '\app\Locale\fr_FR\translations.php';
+    $mpt_config['path_kb_root']     = dirname(__DIR__);
+    $mpt_config['path_plugins']     = $mpt_config['path_kb_root'] . '\plugins';
+    $mpt_config['path_locales']     = $mpt_config['path_kb_root'] . '\app\Locale';
+    $mpt_config['kb_master_lang']   = $mpt_config['path_kb_root'] . '\app\Locale\fr_FR\translations.php';
+    $mpt_config['translate_plugin'] = $mpt_config['path_plugins'] . '\\' . $mpt_config['my_plugin_folder'];
+
+    // get all available languages in Kanboard
+    $mpt_config['kb_all_langs'] = getLanguages();
 
 }
 /**
@@ -150,10 +173,9 @@ function initialize($my_plugin_folder, $my_plugin_langs, $prepare_all_other_lang
  *
  * @return array
  */
-function getPluginScripts() {
+function getPluginScripts($plugin_folder) {
     // files and folders to ignore
     $ignore_pattern = array(
-        'KB_make_plugin_translations.php',
         '.git',
         'assets',
         'Locale',
@@ -162,9 +184,9 @@ function getPluginScripts() {
 
     // manually add the Plugin.php-script as the first script ...
     // this enables us, to add translations from that script in the first place!
-    $plugin_scripts = array(__DIR__ . '\Plugin.php');
+    $plugin_scripts = array($plugin_folder . '\Plugin.php');
 
-    $rii = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(__DIR__));
+    $rii = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($plugin_folder));
     foreach ($rii as $file)
         if (!$file->isDir() && $file->getExtension() === 'php') {
             if (!haystackHasNeedle($file->getPathname(), $ignore_pattern)) {
