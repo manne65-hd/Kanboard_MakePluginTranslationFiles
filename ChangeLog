@@ -1,3 +1,7 @@
+Version 0.1.1 (May 4, 2021)
+* implement new feature to ONLY "prepare" all language-files
+* fixed a bug with the opening PHP-tag in translation-files
+
 Version 0.1.0 (May 3, 2021)
 ----------------------------
 * Let's start BETA-testing

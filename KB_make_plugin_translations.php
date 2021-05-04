@@ -6,7 +6,7 @@
 ** in your plugin and generate/update translation-files for it.
 ** -----------------------------------------------------------------------------
 ** @Author: Manfred Hoffmann
-** @Version: 0.1.0 (2021-05-03)
+** @Version: 0.1.1 (2021-05-04)
 ** -----------------------------------------------------------------------------
 ********************************************************************************/
 
@@ -16,17 +16,22 @@
  * BELOW you'll find some parameters you'll have to adjust,
  * in order to configure this script.
  *============================================================================*/
-// foldername of the plugin for which you want to prepare/update translations
+// foldername of the plugin for which you want to generate/update translations
 $my_plugin_folder = 'My_KanboardPlugin'; // CASE-sensitive!
 
 /* array of language-codes for which you want to offer translations
- * MUST be a vaild code as available in Kanboard/app/Model/LanguageModel.php */
+ * MUST be a vaild code as available in Kanboard/app/Model/LanguageModel.php
+ * ! SPECIAL CASE !
+ *  If you don't want to translate, but ONLY "prepare" language-files:
+ *  - Populate the $my_plugin_langs-array with a single element: 'prepare_only'
+ *  - set $prepare_all_other_langs = TRUE;
+  */
 $my_plugin_langs = array(
      'xy_XY',
      'zz_ZZ',
 );
 
-/* set to TRUE if you want to prepare translations for all other languages.
+/* set to TRUE if you want to "prepare" translations for all other languages.
  * This will generate language-files with all statements commented out like:
  *    // 'Your first term' => '',
  *    // 'another term' => '',
@@ -56,14 +61,13 @@ $log_to_file = FALSE; // not implemeted yet!!
 
 
 
-/* let's try to use the LanguageModel from Kanboard later
+/* let's try to use the LanguageModel from Kanboard later(if that is possible)
 
 use Kanboard\Model\LanguageModel;
 require_once __DIR__.'/../app/Core/Base.php';
 require_once __DIR__.'/../app/MOdel/LanguageModel.php';
 $kb_lang_model = new languageModel;
 */
-$kb_lang_model = FALSE;
 
 // DIE-message when called via browser
 define('NON_CLI_DIE_MESSAGE', 'This script can only be run in CommandLineMode!');
@@ -97,8 +101,13 @@ if ($my_plugin_folder === 'My_KanboardPlugin') {
     }
 }
 
-// check if $my_plugin_langs contain(ONLY) valid language-codes
-checkLangsValid();
+// check if $my_plugin_langs contains(ONLY) valid language-codes
+if (implode($mpt_config['my_plugin_langs']) === 'prepare_only') {
+    // OK ... you only want to "prepare" language-files
+    $mpt_config['gen_translation'] = FALSE;
+} else {
+    checkLangsValid();
+}
 
 /* -----------------------------------------------------------------------------
  * Find and extract all language keys ...
@@ -144,11 +153,13 @@ $translate_plugin_lang_keys = array_diff($plugin_unique_lang_keys, $kb_lang_keys
 
 /* -----------------------------------------------------------------------------
  * Let's start generating translation-files ...
- *      - ITERATE $mpt_config['my_plugin_langs']
- *          - get (existing) translations for the current language
- *          - write new/updated translations.php
- *            (preserving existing translations and adding new ones!)
- *      - DONE ITERATING $mpt_config['my_plugin_langs']
+ *      - IF $mpt_config['gen_translation'] = TRUE
+ *          - ITERATE $mpt_config['my_plugin_langs']
+ *              - get (existing) translations for the current language
+ *              - write new/updated translations.php
+ *                (preserving existing translations and adding new ones!)
+ *          - DONE ITERATING $mpt_config['my_plugin_langs']
+ *
  *      - IF $prepare_all_other_langs = TRUE
  *          - ITERATE over all other languages
  *              - get (existing) translations for the current language
@@ -159,17 +170,19 @@ $translate_plugin_lang_keys = array_diff($plugin_unique_lang_keys, $kb_lang_keys
  *-----------------------------------------------------------------------------*/
 
 
-foreach ($mpt_config['my_plugin_langs'] as $translate_lang) {
-    $translation_file = $mpt_config['translate_plugin'] . '\Locale\\' . $translate_lang . '\translations.php';
-    $translation_keys = getTranslations($translation_file);
+if ($mpt_config['gen_translation']) {
+    foreach ($mpt_config['my_plugin_langs'] as $translate_lang) {
+        $translation_file = $mpt_config['translate_plugin'] . '\Locale\\' . $translate_lang . '\translations.php';
+        $translation_keys = getTranslations($translation_file);
 
-    // we might have to create the folder first ...
-    $translation_folder = dirname($translation_file);
-    if (!file_exists($translation_folder)) {
-        mkdir($translation_folder);
+        // we might have to create the folder first ...
+        $translation_folder = dirname($translation_file);
+        if (!file_exists($translation_folder)) {
+            mkdir($translation_folder);
+        }
+
+        makeTranslation($translation_file, $translate_plugin_lang_keys, $translation_keys);
     }
-
-    makeTranslation($translation_file, $translate_plugin_lang_keys, $translation_keys);
 }
 
 if ($mpt_config['prep_other_langs']) {
@@ -223,7 +236,11 @@ function initialize($my_plugin_folder, $my_plugin_langs, $prepare_all_other_lang
     $mpt_config['kb_master_lang']   = $mpt_config['path_kb_root'] . '\app\Locale\fr_FR\translations.php';
     $mpt_config['translate_plugin'] = $mpt_config['path_plugins'] . '\\' . $mpt_config['my_plugin_folder'];
 
+    // allow to generate NO translations, but instead ONLY "prepare" all $languages
+    $mpt_config['gen_translation'] = TRUE;
+
     // get all available languages in Kanboard
+    //$mpt_config['kb_all_langs'] = $kb_lang_model->getLanguages(); // don't know if this can even be done
     $mpt_config['kb_all_langs'] = getLanguages();
 
 }
@@ -282,7 +299,7 @@ function getLangKeys($lang_file) {
             }
         }
         if (!feof($handle)) {
-            echo "Fehler: unerwarteter fgets() Fehlschlag\n";
+            mpt_die('Error while reading ' . $lang_file);
         }
         fclose($handle);
     }
@@ -330,7 +347,7 @@ function getTranslations($lang_file) {
             }
         }
         if (!feof($handle)) {
-            echo "Fehler: unerwarteter fgets() Fehlschlag\n";
+            mpt_die('Error while reading ' . $lang_file);
         }
         fclose($handle);
     }
@@ -377,7 +394,7 @@ function getScriptKeys($script_file) {
 
 
         if (!feof($handle)) {
-            echo "Fehler: unerwarteter fgets() Fehlschlag\n";
+            mpt_die('Error while reading ' . $script_file);
         }
         fclose($handle);
     }
@@ -394,13 +411,13 @@ function getScriptKeys($script_file) {
 function makeTranslation($lang_file, $trans_keys, $translated_keys = array('foo' => 'bar'), $prepare_translation = FALSE) {
     // try opening file in WRITE-mode
     if (!$handle = fopen($lang_file, 'w')) {
-        die('ERROR');
+        mpt_die('Error while trying to create/update ' . $lang_file);
     };
 
 
     // generate PHP opening-tags and required code for the array ...
     if (!fwrite($handle, getTransHeader())) {
-        die('ERROR');
+        mpt_die('Error while trying to write to ' . $lang_file);
     }
         // now let's iterate over the keys to get translated and generate the code
         foreach ($trans_keys as $trans_key) {
@@ -412,13 +429,13 @@ function makeTranslation($lang_file, $trans_keys, $translated_keys = array('foo'
                 $trans_line .= "'$trans_key' => ''," . PHP_EOL;
             }
             if (!fwrite($handle, $trans_line)) {
-                die('ERROR');
+                mpt_die('Error while trying to write to ' . $lang_file);
             }
         }
 
     // generate final code and colse the file-handle
     if (!fwrite($handle, getTransFooter())) {
-        die('ERROR');
+        mpt_die('Error while trying to close ' . $lang_file);
     }
     fclose($handle);
 
@@ -482,7 +499,7 @@ function getLanguages() {
  */
 function getTransHeader(){
 $file_header = <<<EOD
-<?
+<?php
 // Plugin-translation-file generated with **KB_make_plugin_translations.php**
 // Check it out at https://github.com/manne65-hd/Kanboard_MakePluginTranslationFiles
 return array(
