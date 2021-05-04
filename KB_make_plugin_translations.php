@@ -36,7 +36,7 @@ $my_plugin_langs = array(
  *    // 'Your first term' => '',
  *    // 'another term' => '',
  */
-$prepare_all_other_langs = TRUE;
+$prepare_all_other_langs = FALSE;
 
 // set to TRUE if you want to generate a LOG-file of the process
 $log_to_file = FALSE; // not implemeted yet!!
