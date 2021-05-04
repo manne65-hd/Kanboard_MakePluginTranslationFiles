@@ -6,7 +6,7 @@
 ** in your plugin and generate/update translation-files for it.
 ** -----------------------------------------------------------------------------
 ** @Author: Manfred Hoffmann
-** @Version: 0.1.0 (2021-05-03)
+** @Version: 0.1.1 (2021-05-04)
 ** -----------------------------------------------------------------------------
 ********************************************************************************/
 
@@ -17,7 +17,7 @@
  * in order to configure this script.
  *============================================================================*/
 // foldername of the plugin for which you want to generate/update translations
-$my_plugin_folder = 'My_TestPlugin'; // CASE-sensitive!
+$my_plugin_folder = 'My_KanboardPlugin'; // CASE-sensitive!
 
 /* array of language-codes for which you want to offer translations
  * MUST be a vaild code as available in Kanboard/app/Model/LanguageModel.php
@@ -29,10 +29,6 @@ $my_plugin_folder = 'My_TestPlugin'; // CASE-sensitive!
 $my_plugin_langs = array(
      'xy_XY',
      'zz_ZZ',
-);
-$my_plugin_langs = array(
-    'de_DE',
-    'de_DE_du'
 );
 
 /* set to TRUE if you want to "prepare" translations for all other languages.
@@ -503,7 +499,7 @@ function getLanguages() {
  */
 function getTransHeader(){
 $file_header = <<<EOD
-<?
+<?php
 // Plugin-translation-file generated with **KB_make_plugin_translations.php**
 // Check it out at https://github.com/manne65-hd/Kanboard_MakePluginTranslationFiles
 return array(
