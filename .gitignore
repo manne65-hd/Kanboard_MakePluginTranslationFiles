@@ -1,2 +1,3 @@
-# ... let's ignore the logs-folder
+# ... let's ignore the logs-folder and the TEST-script
 /logs
+TEST_make_plugin_translations.php
